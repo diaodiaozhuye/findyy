@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx" xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.1.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.1.xsd
+		http://www.springframework.org/schema/data/jpa http://www.springframework.org/schema/data/jpa/spring-jpa-1.0.xsd">
+
+    <context:property-placeholder ignore-unresolvable="true" local-override="true"
+                                  location="classpath*:/dbconfig.properties"/>
+
+    <!-- 数据源配置, 使用DBCP数据库连接池 -->
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+        <!-- Connection Info -->
+        <property name="driverClassName" value="${jdbc.drive}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+
+        <!-- Connection Pooling Info -->
+        <property name="initialSize" value="${dbcp.initialSize}"/> 
+        <property name="maxActive" value="${dbcp.maxActive}"/>
+        <property name="maxIdle" value="${dbcp.maxIdle}"/>
+        <property name="minIdle" value="${dbcp.minIdle}"/>
+        <property name="defaultAutoCommit" value="false"/>
+        <property name="maxWait" value="1000"/>
+        
+        <!-- 当timeBetweenEvictionRunsMillis大于0时单位毫秒，每过timeBetweenEvictionRunsMillis时间，就会启动一个线程，校验连接池中闲置时间超过minEvictableIdleTimeMillis的连接对象 -->
+        <property name="timeBetweenEvictionRunsMillis" value="30000"/>
+        <!-- 池中的连接空闲30分钟后被回收,默认值就是30分钟。 -->
+        <property name="minEvictableIdleTimeMillis" value="1800000"/>
+       	 <!-- 在每次空闲连接回收器线程(如果有)运行 时检查的连接数量 -->
+       	<property name="numTestsPerEvictionRun" value="100"></property>
+        <!-- 用于连接有效性验证 -->
+<!--         <property name="validationQuery" value="select count(1) from dual"/> 
+ -->        <!-- true，false 连接池收回空闲的活动连接时是否打印消息 -->
+        <property name="logAbandoned" value="true"/>
+        <!-- 是否清理removeAbandonedTimeout秒没有使用的活动连接，清理后并没有放回连接池 -->
+        <property name="removeAbandoned" value="true"/>
+        <!-- 泄露的连接可以被删除的超时值, 单位秒 -->
+        <property name="removeAbandonedTimeout" value="180"></property>
+        <!-- 表示每30秒，取出3条连接，使用validationQuery = "SELECT 1" 中的SQL进行测试 ，测试不成功就销毁连接。销毁连接后，连接数量就少了，如果小于minIdle数量，就新建连接。 -->
+       	<!-- <property name="testWhileIdle" value="true"/> -->
+       	<!-- testOnBorrow = "false" 一定要配置，因为它的默认值是true。false表示每次从连接池中取出连接时，不需要执行validationQuery = "SELECT 1" 中的SQL进行测试。若配置为true,对性能有非常大的影响，性能会下降7-10倍。所在一定要配置为false -->
+        <property name="testOnBorrow" value="false"/>
+        <!-- 返回连接是否进行有效性验证 -->
+<!--         <property name="testOnReturn" value="true"></property>
+ -->        
+    </bean>
+
+    <!-- 使用annotation 自动注册bean, 并保证@Required、@Autowired的属性被注入 -->
+    <context:component-scan base-package="com.wc.findyy">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+    <!-- (事务管理)transaction manager, use JtaTransactionManager for global tx -->  
+    <bean id="transactionManager"  
+        class="org.springframework.jdbc.datasource.DataSourceTransactionManager">  
+        <property name="dataSource" ref="dataSource" />  
+    </bean>  
+  
+    <!-- 创建SqlSessionFactory，同时指定数据源 -->  
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">  
+        <property name="dataSource" ref="dataSource" />  
+        <property name="configLocation" value="classpath:mybatis_config.xml"></property>
+    </bean>  
+      
+    <!-- 可通过注解控制事务 -->  
+    <tx:annotation-driven />  
+  
+    <!-- Mapper接口所在包名，Spring会自动查找其下的Mapper -->  
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">  
+        <property name="basePackage" value="com.wc.findyy.dao.mapper" />  
+    </bean> 
+</beans>
